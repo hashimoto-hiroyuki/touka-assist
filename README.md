@@ -4,11 +4,18 @@
 
 ## ✨ 機能
 
-- 📷 **画像アップロード**: アンケート画像をアップロード
+- 📷 **画像アップロード**: PNG, JPG, JPEG, BMP, TIFF対応
+- 📄 **PDFアップロード**: 複数ページPDFに対応（ページ切り替え可能）
 - 🔍 **OCR読み取り**: Tesseract.jsによる日本語文字認識
 - 📝 **入力フォーム**: 各質問項目に対応した入力フィールド
 - 📊 **結果管理**: 入力結果の一覧表示・削除
 - 📥 **CSVエクスポート**: 結果をCSVファイルでダウンロード
+
+## 🆕 v1.1.0 新機能
+
+- **PDF対応**: PDFファイルを直接読み込み可能
+- **複数ページ対応**: PDFの各ページを切り替えてOCR実行
+- **高解像度変換**: PDFを高品質な画像に変換してOCR精度向上
 
 ## 🚀 セットアップ
 
@@ -44,9 +51,11 @@ touka-assist/
 ├── public/
 ├── src/
 │   ├── components/
-│   │   ├── ImagePreview.jsx    # 画像プレビュー
+│   │   ├── ImagePreview.jsx    # 画像/PDFプレビュー
 │   │   ├── QuestionForm.jsx    # 質問フォーム
 │   │   └── ResultDisplay.jsx   # 結果表示
+│   ├── utils/
+│   │   └── pdfUtils.js         # PDF処理ユーティリティ
 │   ├── App.jsx                 # メインコンポーネント
 │   ├── App.css                 # スタイル
 │   ├── index.css               # グローバルスタイル
@@ -84,6 +93,7 @@ touka-assist/
 
 - **フロントエンド**: React 18 + Vite
 - **OCR**: Tesseract.js
+- **PDF処理**: PDF.js
 - **スタイリング**: CSS
 - **デプロイ**: Vercel
 

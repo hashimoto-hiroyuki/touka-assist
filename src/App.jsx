@@ -36,13 +36,15 @@ function App() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [formData, setFormData] = useState({})
   const [results, setResults] = useState([])
-  const [activeTab, setActiveTab] = useState('input') // 'input' or 'results'
+  const [activeTab, setActiveTab] = useState('input')
+  const [fileType, setFileType] = useState('image') // 'image' or 'pdf'
 
   // 画像選択ハンドラ
   const handleImageSelect = (e) => {
     const file = e.target.files[0]
     if (file) {
       setImage(file)
+      setFileType('image')
       const reader = new FileReader()
       reader.onloadend = () => {
         setImagePreview(reader.result)
@@ -51,10 +53,17 @@ function App() {
     }
   }
 
+  // PDF読み込みハンドラ
+  const handlePdfLoad = (imageDataUrl, pdfFile) => {
+    setImagePreview(imageDataUrl)
+    setImage(imageDataUrl) // DataURLをそのまま使用
+    setFileType('pdf')
+  }
+
   // OCR実行
   const runOCR = async () => {
-    if (!image) {
-      alert('先に画像を選択してください。')
+    if (!imagePreview) {
+      alert('先にファイルを選択してください。')
       return
     }
 
@@ -62,8 +71,11 @@ function App() {
     setOcrProgress(0)
 
     try {
+      // 画像またはPDFから変換された画像に対してOCR実行
+      const imageSource = fileType === 'pdf' ? imagePreview : image
+      
       const result = await Tesseract.recognize(
-        image,
+        imageSource,
         'jpn',
         {
           logger: (m) => {
@@ -95,6 +107,7 @@ function App() {
       setOcrText('')
       setImage(null)
       setImagePreview(null)
+      setFileType('image')
     }
   }
 
@@ -122,7 +135,6 @@ function App() {
       ...results.map(r => 
         QUESTIONS.map(q => {
           const value = r.data[q.id] || ''
-          // カンマや改行を含む場合はダブルクォートで囲む
           return value.includes(',') || value.includes('\n') 
             ? `"${value.replace(/"/g, '""')}"` 
             : value
@@ -143,7 +155,7 @@ function App() {
     <div className="app">
       <header className="header">
         <h1>🦷 糖化アンケート入力システム</h1>
-        <p>Touka Assist - 歯科医院向けアンケートOCR入力支援</p>
+        <p>Touka Assist - 画像・PDF対応 OCR入力支援</p>
       </header>
 
       <nav className="tabs">
@@ -169,6 +181,7 @@ function App() {
               <ImagePreview
                 imagePreview={imagePreview}
                 onImageSelect={handleImageSelect}
+                onPdfLoad={handlePdfLoad}
                 onRunOCR={runOCR}
                 isProcessing={isProcessing}
                 ocrProgress={ocrProgress}
@@ -214,7 +227,7 @@ function App() {
       </main>
 
       <footer className="footer">
-        <p>© 2026 Touka Assist | ホワイト歯科医院</p>
+        <p>© 2026 Touka Assist | ホワイト歯科医院 | PDF対応版</p>
       </footer>
     </div>
   )
