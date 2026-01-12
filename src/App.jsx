@@ -1,11 +1,11 @@
-import { useState } from 'react'
-import Tesseract from 'tesseract.js'
+import { useState, useEffect } from 'react'
 import ImagePreview from './components/ImagePreview'
 import QuestionForm from './components/QuestionForm'
 import ResultDisplay from './components/ResultDisplay'
+import ApiKeySettings from './components/ApiKeySettings'
+import { runGeminiOCR, runGeminiOCRStructured } from './utils/geminiOCR'
 import './App.css'
 
-// 質問項目の定義
 const QUESTIONS = [
   { id: "patient_id", label: "患者さんID", type: "text" },
   { id: "name_sei", label: "名前（カタカナ）氏", type: "text" },
@@ -32,14 +32,30 @@ function App() {
   const [image, setImage] = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
   const [ocrText, setOcrText] = useState('')
-  const [ocrProgress, setOcrProgress] = useState(0)
   const [isProcessing, setIsProcessing] = useState(false)
   const [formData, setFormData] = useState({})
   const [results, setResults] = useState([])
   const [activeTab, setActiveTab] = useState('input')
-  const [fileType, setFileType] = useState('image') // 'image' or 'pdf'
+  const [fileType, setFileType] = useState('image')
+  const [apiKey, setApiKey] = useState('')
+  const [showSettings, setShowSettings] = useState(false)
+  const [ocrMode, setOcrMode] = useState('structured') // 'text' or 'structured'
 
-  // 画像選択ハンドラ
+  // APIキーをローカルストレージから読み込み
+  useEffect(() => {
+    const savedKey = localStorage.getItem('gemini_api_key')
+    if (savedKey) {
+      setApiKey(savedKey)
+    }
+  }, [])
+
+  // APIキーを保存
+  const saveApiKey = (key) => {
+    setApiKey(key)
+    localStorage.setItem('gemini_api_key', key)
+    setShowSettings(false)
+  }
+
   const handleImageSelect = (e) => {
     const file = e.target.files[0]
     if (file) {
@@ -53,54 +69,63 @@ function App() {
     }
   }
 
-  // PDF読み込みハンドラ
   const handlePdfLoad = (imageDataUrl, pdfFile) => {
     setImagePreview(imageDataUrl)
-    setImage(imageDataUrl) // DataURLをそのまま使用
+    setImage(imageDataUrl)
     setFileType('pdf')
   }
 
-  // OCR実行
   const runOCR = async () => {
     if (!imagePreview) {
       alert('先にファイルを選択してください。')
       return
     }
 
+    if (!apiKey) {
+      alert('APIキーを設定してください。右上の⚙️ボタンから設定できます。')
+      setShowSettings(true)
+      return
+    }
+
     setIsProcessing(true)
-    setOcrProgress(0)
+    setOcrText('🔄 Gemini APIで読み取り中...')
 
     try {
-      // 画像またはPDFから変換された画像に対してOCR実行
       const imageSource = fileType === 'pdf' ? imagePreview : image
-      
-      const result = await Tesseract.recognize(
-        imageSource,
-        'jpn',
-        {
-          logger: (m) => {
-            if (m.status === 'recognizing text') {
-              setOcrProgress(Math.round(m.progress * 100))
-            }
-          }
+
+      if (ocrMode === 'structured') {
+        // 構造化データとして読み取り → フォームに自動入力
+        const structuredData = await runGeminiOCRStructured(apiKey, imageSource)
+        
+        if (structuredData) {
+          setFormData(structuredData)
+          setOcrText('✅ 読み取り完了！フォームに自動入力しました。\n\n【読み取り結果】\n' + 
+            JSON.stringify(structuredData, null, 2))
+        } else {
+          setOcrText('⚠️ 構造化データの抽出に失敗しました。テキストモードで再試行してください。')
         }
-      )
-      setOcrText(result.data.text)
+      } else {
+        // テキストとして読み取り
+        const text = await runGeminiOCR(apiKey, imageSource)
+        setOcrText(text)
+      }
     } catch (error) {
       console.error('OCR Error:', error)
-      alert('OCR処理中にエラーが発生しました。')
+      setOcrText(`❌ エラー: ${error.message}`)
+      
+      if (error.message.includes('API key')) {
+        alert('APIキーが無効です。正しいAPIキーを設定してください。')
+        setShowSettings(true)
+      }
     } finally {
       setIsProcessing(false)
-      setOcrProgress(0)
     }
   }
 
-  // フォーム入力ハンドラ
   const handleInputChange = (id, value) => {
     setFormData(prev => ({ ...prev, [id]: value }))
   }
 
-  // フォームクリア
   const clearForm = () => {
     if (window.confirm('入力内容をクリアしますか？')) {
       setFormData({})
@@ -111,7 +136,6 @@ function App() {
     }
   }
 
-  // 結果を追加
   const addResult = () => {
     const newResult = {
       id: Date.now(),
@@ -122,7 +146,6 @@ function App() {
     alert('結果を追加しました。')
   }
 
-  // CSVダウンロード
   const downloadCSV = () => {
     if (results.length === 0) {
       alert('保存する結果がありません。')
@@ -155,8 +178,23 @@ function App() {
     <div className="app">
       <header className="header">
         <h1>🦷 糖化アンケート入力システム</h1>
-        <p>Touka Assist - 画像・PDF対応 OCR入力支援</p>
+        <p>Touka Assist - Gemini AI OCR対応版</p>
+        <button 
+          className="settings-btn"
+          onClick={() => setShowSettings(true)}
+          title="API設定"
+        >
+          ⚙️
+        </button>
       </header>
+
+      {showSettings && (
+        <ApiKeySettings
+          apiKey={apiKey}
+          onSave={saveApiKey}
+          onClose={() => setShowSettings(false)}
+        />
+      )}
 
       <nav className="tabs">
         <button 
@@ -176,7 +214,6 @@ function App() {
       <main className="main">
         {activeTab === 'input' ? (
           <div className="input-container">
-            {/* 左側: 画像・OCR */}
             <section className="left-panel">
               <ImagePreview
                 imagePreview={imagePreview}
@@ -184,21 +221,49 @@ function App() {
                 onPdfLoad={handlePdfLoad}
                 onRunOCR={runOCR}
                 isProcessing={isProcessing}
-                ocrProgress={ocrProgress}
+                ocrProgress={0}
               />
+
+              {/* OCRモード切替 */}
+              <div className="ocr-mode-selector">
+                <label>
+                  <input
+                    type="radio"
+                    value="structured"
+                    checked={ocrMode === 'structured'}
+                    onChange={(e) => setOcrMode(e.target.value)}
+                  />
+                  🎯 自動入力モード（推奨）
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    value="text"
+                    checked={ocrMode === 'text'}
+                    onChange={(e) => setOcrMode(e.target.value)}
+                  />
+                  📄 テキスト抽出モード
+                </label>
+              </div>
               
               <div className="ocr-result">
-                <h3>📄 OCR読み取り結果（参考）</h3>
+                <h3>📄 OCR読み取り結果</h3>
                 <textarea
                   value={ocrText}
                   onChange={(e) => setOcrText(e.target.value)}
-                  placeholder="OCRを実行すると、ここに結果が表示されます..."
+                  placeholder="Gemini AIでOCRを実行すると、ここに結果が表示されます..."
                   rows={10}
                 />
               </div>
+
+              {!apiKey && (
+                <div className="api-key-warning">
+                  ⚠️ APIキーが設定されていません。
+                  <button onClick={() => setShowSettings(true)}>設定する</button>
+                </div>
+              )}
             </section>
 
-            {/* 右側: 入力フォーム */}
             <section className="right-panel">
               <QuestionForm
                 questions={QUESTIONS}
@@ -227,7 +292,7 @@ function App() {
       </main>
 
       <footer className="footer">
-        <p>© 2026 Touka Assist | ホワイト歯科医院 | PDF対応版</p>
+        <p>© 2026 Touka Assist | ホワイト歯科医院 | Gemini AI OCR版</p>
       </footer>
     </div>
   )
