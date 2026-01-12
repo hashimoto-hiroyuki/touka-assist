@@ -2,7 +2,7 @@
  * Gemini API を使用したOCR処理
  */
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent'
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent'
 
 /**
  * 画像をBase64に変換
