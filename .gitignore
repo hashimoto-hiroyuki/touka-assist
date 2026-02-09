@@ -32,3 +32,18 @@ Thumbs.db
 # Cache
 .cache/
 *.log
+
+
+# Python
+ocr/venv/
+ocr/__pycache__/
+ocr/cropped_images/
+ocr/Scan Data/
+ocr/Checked Data/
+ocr/*.jpg
+ocr/*.png
+ocr/*.PDF
+ocr/tmpclaude-*
+ocr/nul
+ocr/.env.txt
+*.pyc
