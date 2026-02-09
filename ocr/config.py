@@ -92,7 +92,7 @@ RELATIVE_REGIONS = {
 
     # --- v2.1新規: QRコード回答チェックボックス（OCR処理用）---
     "質問2_QRコード回答": {
-        "x": 0.72, "y": 0.158, "width": 0.025, "height": 0.020,
+        "x": 0.772, "y": 0.153, "width": 0.038, "height": 0.028,
         "type": "checkbox_single",
         "options": ["チェックあり", "チェックなし"],
         "description": "「以降、QRコードで回答」チェックボックス",
@@ -104,7 +104,7 @@ RELATIVE_REGIONS = {
 
     # --- v2.1新規: 行全体（確認UI表示用）---
     "質問2_行全体": {
-        "x": 0.03, "y": 0.155, "width": 0.94, "height": 0.025,
+        "x": 0.03, "y": 0.150, "width": 0.96, "height": 0.032,
         "type": "review_image",
         "description": "質問2の行全体（人による確認用切り出し画像）",
         "review_only": True,  # OCR処理対象外、確認UI用のみ
